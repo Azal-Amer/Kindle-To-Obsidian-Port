@@ -250,7 +250,7 @@ quoteObjects = [quote for quote in quoteObjects if quote.note == False or quote.
 
 
 # %%
-# given a mapping directory in Obsidian, open it up and construct a dictionary to map our titles from one to another
+# given a mapping directory in Obsidian, open it up and construct a dictionary to map our titles from one to another. This is particularly useful if we want to change the title of a book automatically
 mapDir = '/Users/amer_/Documents/Obsidian Vault/Personal/Main Book Overview.md'
 
 with open(mapDir,'r') as file:
@@ -282,6 +282,7 @@ import os
 # Now we want to make the author markdown file
 # Make a new file and write the markdown to it
 
+# this is the directory we want to drop the new markdown files into
 directory = '/Users/amer_/Documents/Obsidian Vault/Personal/Books/'
 files = os.listdir(directory)
 existingTitles = []
