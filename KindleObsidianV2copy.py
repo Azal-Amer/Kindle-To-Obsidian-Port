@@ -5,14 +5,6 @@ import re
 from itertools import groupby
 import shutil
 import os
-templateDir = '/Users/amer_/Documents/GitHub/KindleProject/Book Template.md'
-textDirectory = '/Volumes/Kindle/documents/My Clippings.txt'
-
-previousDirectory = '/Users/amer_/Documents/Obsidian Vault/Personal/Books/My Clippings.txt'
-
-obsidianDirectory = '/Users/amer_/Documents/Obsidian Vault/Personal/Books/'
-
-
 # %%
 class Quote:
     def __init__(self, title, author, content, location,date,page = 'na',note = False):
@@ -29,7 +21,7 @@ class Quote:
         # develop later once we have come up with a markdown format
         # what we want to do is open the markdown file, and replace the content in curly brackets, with the content of the quote
         template = ''
-        with open(templateDir,'r') as file:
+        with open('/Users/amer_/Documents/GitHub/KindleProject/Book Template.md','r') as file:
             template = file.read()
             
             file.close()
@@ -50,7 +42,7 @@ class Quote:
         return template
     def markdownTitle(self):
         template = ''
-        with open(templateDir,'r') as file:
+        with open('/Users/amer_/Documents/GitHub/KindleProject/Book Template.md','r') as file:
             template = file.read()
             
             file.close()
@@ -60,8 +52,14 @@ class Quote:
 
 
 # %%
+
+
+# %%
 def drop_empty(quotes):
     return [quote for quote in quotes if (quote.strip() != '' and quote.strip() != [])]
+
+# %%
+
 
 # %%
 
@@ -88,18 +86,26 @@ def extractLocationDate(text):
     # remove the 'Your Highlight on page' part
     note = False
     date = ''
-    
-            
-    
-    if ("note" in page.lower()):
+    # NOTE THIS IS NOT GOING TO WORK IF WE WANT THE NOTES TOO
+    page = page.split('- Your Highlight on page ')
+    if len(page) <= 1:
+
+        page = page[0].split('- Your Note on page ')
+        # print(page)
+        if len(page)<=1:
+            page = 'na'
+        else:
+            page = page[1]
+        
         note = True
-
-    if ("page" in page.lower()):
-        page = int(re.findall(r'\d+', page)[0])
-        # extract the number from this string
     else:
-        page = 'na'
+        note = False
+        page = page[1]
+    # Above is for the note condition
+    if(page!= 'na'):
+        page = int(page)
 
+    
     if(page!= 'na'):
         location = locationDate[1]
         date = locationDate[2].replace('Added on ', '')[1:]
@@ -148,6 +154,7 @@ def kindleProcessing(data):
             isNote = locationDateTime['isNote']
             quoteObjects.append(Quote(title,author,content,location,date,page = page,note = isNote))
     return quoteObjects
+textDirectory = '/Users/amer_/Desktop/My Clippings.txt'
 data = ''
 with open(textDirectory, 'r') as file:
     # read the file
@@ -157,6 +164,8 @@ with open(textDirectory, 'r') as file:
 newQuoteObjects = kindleProcessing(data)
 
 # open up the existing version of the clippings, 
+previousDirectory = '/Users/amer_/Documents/Obsidian Vault/Personal/Books/My Clippings.txt'
+
 
 
 # %%
@@ -193,7 +202,55 @@ for quote in quoteObjects:
 unique_titles
 
 # %%
-# given a mapping directory in Obsidian, open it up and construct a dictionary to map our titles from one to another
+
+# Okay now we want to group each of the quote objects by title
+# Sort the quote objects by title
+quoteObjects.sort(key=lambda x: x.title)
+
+# Group the quote objects by title
+grouped_quotes = {title: list(quotes) for title, quotes in groupby(quoteObjects, key=lambda x: x.title)}
+
+# %%
+unique_titles = set()
+for quote in quoteObjects:
+    unique_titles.add(quote.title)
+unique_titles
+
+# %%
+# if a note and a quote have the same location, then make the content of the note object, inside the note section of the quote
+#  they will be in the same book so it narrows it down
+
+# first find all the objects that are a note
+def withinRange(quote,note):
+    stringRange = quote.location.replace('Location ','').split('-')
+
+    lowerBound = int(stringRange[0])
+    
+    upperBound = int(stringRange[1].replace(' ',''))
+    noteLocation = int(note.location.replace('Location ','').split('-')[0])
+    boundingCondition = noteLocation >= lowerBound and noteLocation <= upperBound
+    if boundingCondition:
+        print(lowerBound,noteLocation,upperBound,)
+    return boundingCondition
+
+note_objects = [quote for quote in quoteObjects if quote.note]
+for note in note_objects:
+    for quote in grouped_quotes[note.title]:
+        if quote.note == False:
+            if withinRange(quote,note):
+                quote.note = note.content
+                print(quote.__str__())
+quoteObjects = [quote for quote in quoteObjects if quote.note == False or quote.note == True]
+
+# %%
+# With all this done, we should make a markdown template for it to adapt
+
+# %%
+# find all the distict titles
+
+
+# %%
+# given a mapping directory in Obsidian, open it up and construct a dictionary to map our titles from one to another. This is particularly useful if we want to change the title of a book automatically
 mapDir = '/Users/amer_/Documents/Obsidian Vault/Personal/Main Book Overview.md'
 
 with open(mapDir,'r') as file:
@@ -213,79 +270,20 @@ print(mapDict)
 for quote in quoteObjects:
     if quote.title.strip() in mapDict:
         quote.title = mapDict[quote.title.strip()]
-
-# Okay now we want to group each of the quote objects by title
-# Sort the quote objects by title
 quoteObjects.sort(key=lambda x: x.title)
-
-# Group the quote objects by title
+# # Group the quote objects by title
 grouped_quotes = {title: list(quotes) for title, quotes in groupby(quoteObjects, key=lambda x: x.title)}
 
 # %%
-unique_titles = set()
-for quote in quoteObjects:
-    unique_titles.add(quote.title)
-
-
-# %%
-# if a note and a quote have the same location, then make the content of the note object, inside the note section of the quote
-#  they will be in the same book so it narrows it down
-
-# first find all the objects that are a note
-def withinRange(quote,note):
-    stringRange = quote.location.split('Location')[1].split('-')
-    lowerBound = int(stringRange[0].strip())
-    
-    upperBound = int(stringRange[1].replace(' ',''))
-    noteLocationRange = (note.location.split('Location')[1].strip().split('-'))
-    if(len(noteLocationRange) == 1):
-        # the note only spans one location
-        noteLocation = int(noteLocationRange[0])
-        boundingCondition = noteLocation >= lowerBound and noteLocation <= upperBound
-        if boundingCondition:
-            print(lowerBound,noteLocation,upperBound)
-        return boundingCondition
-    else:
-        #  check if the note range is equal to the lower and upper bound
-        lowerCondition = lowerBound==int(noteLocationRange[0].strip())
-        upperCondition = upperBound==int(noteLocationRange[1].strip())
-        return lowerCondition and upperCondition
-             
-
-
-note_objects = [quote for quote in quoteObjects if quote.note]
-
-for i,note in enumerate(note_objects):
-    detection  = False
-    if detection== False:
-        for i,quote in enumerate(grouped_quotes[note.title]):                
-            if quote.note ==True:
-                     # if we are a quote, we shouldnt be in grouped qyotes
-                print('kicked',grouped_quotes[note.title][i].__str__())
-                print('--------')
-                grouped_quotes[note.title].pop(i)
-                # try:
-                    
-            else:
-                if withinRange(quote,note):
-                    grouped_quotes[note.title][i].note = note.content
-
-                    print('rewritting',quote.note)
-                    detection = True
-               
-                    
-
-# check why it didn't clear the previous quote case
-# because they all clocked as notes, something is wrong 
+print(grouped_quotes.keys())
 
 # %%
 import os
 # Now we want to make the author markdown file
 # Make a new file and write the markdown to it
-directory = obsidianDirectory
-# if the directory does not exist, make it
-if not os.path.exists(directory):
-    os.makedirs(directory)
+
+# this is the directory we want to drop the new markdown files into
+directory = '/Users/amer_/Documents/Obsidian Vault/Personal/Books/'
 files = os.listdir(directory)
 existingTitles = []
 print(files)
@@ -307,6 +305,7 @@ for existingTitle in existingTitles:
 # %%
 # make a copy of the original text file into a new directory
 for title in grouped_quotes.keys():
+    print(title)
     currentTitle = grouped_quotes[title]
     # check if the title already exists, if it does then don't add this
     # see all the files in the directory
@@ -318,11 +317,10 @@ for title in grouped_quotes.keys():
         writeMode = 'w'
         currentMarkdown = currentTitle[0].markdownTitle()
     for quote in currentTitle:
-        if quote.note != False:
-            print(quote.note)
         currentMarkdown+= quote.markdownBody()
     # for a given 
     file_path = directory+f"{title}.md"
+    print(currentMarkdown)
     
 
     with open(file_path, writeMode) as file:
@@ -330,8 +328,5 @@ for title in grouped_quotes.keys():
         file.close()
 
 shutil.copy(textDirectory, previousDirectory)
-
-# %%
-
 
 

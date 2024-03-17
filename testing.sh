@@ -2,8 +2,7 @@
 # osascript -e 'display notification "" with title "RUNNING"'
 USB_FILE="/Volumes/Kindle/documents/My Clippings.txt"
 DEST_DIR="$HOME/Desktop"
-PYTHON_SCRIPT="/Users/amer_/Desktop/KindleProject/KindleObsidianV2.py"
-LOG_FILE="$HOME/Desktop/python_script.log"
+PYTHON_SCRIPT="/Users/amer_/Documents/GitHub/KindleProject/KindleObsidianV2.py"
 
 if diskutil list | grep -q "Kindle"; then
     if [ $? -eq 0 ]; then
